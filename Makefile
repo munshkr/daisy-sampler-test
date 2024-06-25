@@ -2,7 +2,10 @@
 TARGET = sampler_test
 
 # Sources
-CPP_SOURCES = src/main.cpp
+CPP_SOURCES = \
+	src/main.cpp \
+	src/fatfs_utils.cpp \
+	src/sample_reader.cpp \
 
 # Library Locations
 LIBDAISY_DIR = ./libs/libDaisy
@@ -19,8 +22,11 @@ C_DEFS += -DLOGGER
 LDFLAGS += -u _printf_float
 endif
 
+# Includes FatFS source files within project.
+USE_FATFS = 1
+
 # To change custom bootloader
-#APP_TYPE = BOOT_QSPI
+APP_TYPE = BOOT_QSPI
 
 # Core location, and generic makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
