@@ -4,6 +4,17 @@ This is an example with our current implementation of the SampleReader (based on
 WavPlayer) for Daisy Pod, to debug the audio issues we are having while
 streaming multiple samples from an SD card.
 
+## Description
+
+You will need to have:
+* MicroSD card with [these samples](https://drive.google.com/drive/folders/1RSWYkXHd0QHwRWoU4sSeadVigvZOFy5y?usp=sharing)
+  stored in the root
+* PHONE output connected to speaker
+
+On power up, the programm will open and play all 16 samples in the SD card at
+the same time.  Button 1 will restart playback of all samples, while button 2
+will re-open all sample files (close+open).
+
 ## Development
 
 ### First time
