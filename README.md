@@ -1,31 +1,34 @@
-# sampler-test
+# nopia-sampler-test
 
-This is a WavPlayer test rom for Daisy Pod, to debug some audio issues we are
-having while streaming multiple samples from an SD card.
+This is an example with our current implementation of the SampleReader (based on
+WavPlayer) for Daisy Pod, to debug the audio issues we are having while
+streaming multiple samples from an SD card.
 
 ## Development
 
 ### First time
 
-*Note*: If you are on Mac or Linux, run `./prepare.sh` to install everything.
-Otherwise, keep reading for the manual instructions.
+If you are on Mac or Linux, run `./prepare.sh` to install everything.
 
-After cloning the repository, compile libDaisy and DaisySP with:
+We are using the **custom bootloader**, so we need to flash it first:
+
+Plug Daisy Seed and activate DFU mode: press and hold Boot, then press and
+hold Reset button, and finally release both buttons.  Then run:
 
 ```sh
-make -j -C libs/libDaisy
+make program-boot
 ```
 
-### Compile and flash firmware
+### Compile and flash program
 
-Run `make -j` to compile the firmware:
+Run `make -j` to compile:
 
 ```sh
 make -j
 ```
 
-Plug your Daisy Seed and activate DFU mode: press and hold Boot, then press and
-hold Reset button, and finally release both buttons in your Daisy.  Now run:
+Then enter DFU mode from the bootloader (press Reset once, then press Boot)
+Finally run:
 
 ```sh
 make program-dfu
