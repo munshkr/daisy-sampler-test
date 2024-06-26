@@ -65,7 +65,7 @@ void OpenAllSampleFiles()
 
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
-        std::string filename = std::to_string(40 + i * 2) + ".wav";
+        std::string filename = std::to_string(60 + i * 2) + ".wav";
         sample_readers[i].Open(filename);
     }
 }

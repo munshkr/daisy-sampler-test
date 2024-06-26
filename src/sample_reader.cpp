@@ -16,12 +16,13 @@ void SampleReader::Init(int16_t* buff, size_t buff_size)
     path_      = "";
 
     // Reset the state, just in case
-    read_ptr_   = 0;
-    data_pos_   = 0;
-    playing_    = false;
-    looping_    = false;
-    invalid_    = true;
-    buff_state_ = BUFFER_STATE_IDLE;
+    read_ptr_       = 0;
+    data_pos_       = 0;
+    playing_        = false;
+    looping_        = false;
+    invalid_        = true;
+    buff_state_     = BUFFER_STATE_IDLE;
+    fade_out_count_ = 0;
 }
 
 FRESULT SampleReader::Open(std::string path)
@@ -69,6 +70,17 @@ FRESULT SampleReader::Open(std::string path)
     }
     LOG("[Open] Seeked to %d: %s", data_pos_, LogFsError(res));
 
+    // If we were already playing another sample, start fading out. Calculate
+    // count based on current read pointer and end of half-buffer (with
+    // FADE_OUT_SAMPLES as max):
+    if(playing_)
+    {
+        const size_t half_buffer_sz = buff_size_ / 2;
+        fade_out_count_             = std::min(
+            FADE_OUT_SAMPLES, half_buffer_sz - (read_ptr_ % half_buffer_sz));
+        LOG("[Open] Fading out %d samples", fade_out_count_);
+    }
+
     path_    = path;
     playing_ = true;
     invalid_ = false;
@@ -93,18 +105,49 @@ float SampleReader::Process()
 
     int16_t samp = buff_[read_ptr_];
 
-    // Increment rpo
+    // If we are fading out, reduce gain of sample linearly
+    if(fade_out_count_ > 0)
+    {
+        fade_out_count_--;
+        const float ratio = fade_out_count_ / (float)FADE_OUT_SAMPLES;
+        samp *= ratio;
+        if(fade_out_count_ == 0)
+        {
+            last_sample_ = samp;
+            samp         = 0.0;
+        }
+    }
+
+    // Increment read pointer
     read_ptr_ = (read_ptr_ + 1) % buff_size_;
     if(read_ptr_ == 0)
+    {
         buff_state_ = BUFFER_STATE_PREPARE_1;
+    }
     else if(read_ptr_ == buff_size_ / 2)
+    {
         buff_state_ = BUFFER_STATE_PREPARE_0;
+    }
+
+    // If we're changing buffers, force stop fading out. This shouldn't be
+    // necessary, because count should be 0 already, but just in case...
+    if(fade_out_count_ > 0 && (read_ptr_ == 0 || read_ptr_ == buff_size_ / 2))
+    {
+        fade_out_count_ = 0;
+        samp            = 0.0;
+    }
 
     return s162f(samp);
 }
 
 FRESULT SampleReader::Prepare()
 {
+    if(last_sample_ != INVALID_SAMPLE)
+    {
+        LOG("[Prepare] Last sample before fade out: %f", last_sample_);
+        last_sample_ = INVALID_SAMPLE;
+    }
+
     if(!playing_ || invalid_)
         return FR_OK;
 
@@ -157,7 +200,14 @@ FRESULT SampleReader::Restart()
         LOG("[Restart]: Seeked to %d, result: %s", data_pos_, LogFsError(res));
     }
 
-    playing_ = true;
+    // If we were already playing another sample, start fading out. Calculate
+    // count based on current read pointer and end of half-buffer (with
+    // FADE_OUT_SAMPLES as max):
+    const size_t half_buffer_sz = buff_size_ / 2;
+    fade_out_count_             = std::min(FADE_OUT_SAMPLES,
+                               half_buffer_sz - (read_ptr_ % half_buffer_sz));
+    LOG("[Open] Fading out %d samples", fade_out_count_);
+    // playing_ = true;
 
     return res;
 }
