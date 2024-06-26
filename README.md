@@ -1,8 +1,4 @@
-# nopia-sampler-test
-
-This is an example with our current implementation of the SampleReader (based on
-WavPlayer) for Daisy Pod, to debug the audio issues we are having while
-streaming multiple samples from an SD card.
+# sampler-test
 
 ## Description
 
