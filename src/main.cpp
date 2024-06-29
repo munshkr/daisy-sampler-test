@@ -1,4 +1,4 @@
-// #define MEASURE_LOAD 1
+#define MEASURE_LOAD 1
 
 #include <string>
 
@@ -6,6 +6,8 @@
 #include "fatfs_utils.h"
 #include "sample_reader.h"
 #include "logger.h"
+
+#define DSY_SDRAM_BSS __attribute__((section(".sdram_bss")))
 
 using namespace daisy;
 
@@ -15,7 +17,7 @@ FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
 constexpr size_t BUFSIZE      = 4096;
-constexpr size_t NUM_SAMPLERS = 16; // Sample polyphony
+constexpr size_t NUM_SAMPLERS = 6; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 0.75f;
 
@@ -29,7 +31,7 @@ void InitMemoryCard()
 
     // Initialize the SDMMC Hardware
     SdmmcHandler::Config sd_cfg;
-    sd_cfg.speed           = SdmmcHandler::Speed::STANDARD;
+    sd_cfg.speed           = SdmmcHandler::Speed::FAST;
     sd_cfg.width           = SdmmcHandler::BusWidth::BITS_4;
     sd_cfg.clock_powersave = true;
     sdcard.Init(sd_cfg);
@@ -147,7 +149,7 @@ int main()
     OpenAllSampleFiles();
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(256);
+    pod.SetAudioBlockSize(512);
 
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
