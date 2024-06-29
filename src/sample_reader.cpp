@@ -105,11 +105,11 @@ float SampleReader::Process()
 
     int16_t samp = buff_[read_ptr_];
 
-    // If we are fading out, reduce gain of sample linearly
+    // If we are fading out, reduce gain of sample exponentially
     if(fade_out_count_ > 0)
     {
         fade_out_count_--;
-        const float ratio = fade_out_count_ / (float)FADE_OUT_SAMPLES;
+        const float ratio = pow(fade_out_count_ / (float)FADE_OUT_SAMPLES, 2);
         samp *= ratio;
         if(fade_out_count_ == 0)
         {
