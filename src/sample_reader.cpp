@@ -15,6 +15,8 @@ void SampleReader::Init(int16_t* buff, size_t buff_size)
     buff_size_ = buff_size;
     path_      = "";
 
+    half_buffer_size_ = buff_size_ / 2;
+
     // Reset the state, just in case
     read_ptr_       = 0;
     data_pos_       = 0;
@@ -22,7 +24,9 @@ void SampleReader::Init(int16_t* buff, size_t buff_size)
     looping_        = false;
     invalid_        = true;
     buff_state_     = BUFFER_STATE_IDLE;
+    fade_in_count_  = 0;
     fade_out_count_ = 0;
+    prev_samp_      = 0;
 }
 
 FRESULT SampleReader::Open(std::string path)
@@ -75,9 +79,8 @@ FRESULT SampleReader::Open(std::string path)
     // FADE_OUT_SAMPLES as max):
     if(playing_)
     {
-        const size_t half_buffer_sz = buff_size_ / 2;
-        fade_out_count_             = std::min(
-            FADE_OUT_SAMPLES, half_buffer_sz - (read_ptr_ % half_buffer_sz));
+        fade_out_count_ = std::min(
+            FADE_SAMPLES, half_buffer_size_ - (read_ptr_ % half_buffer_size_));
         LOG("[Open] Fading out %d samples", fade_out_count_);
     }
 
@@ -105,16 +108,34 @@ float SampleReader::Process()
 
     int16_t samp = buff_[read_ptr_];
 
-    // If we are fading out, reduce gain of sample exponentially
+    // If we are fading out, reduce gain of sample linearly
     if(fade_out_count_ > 0)
     {
         fade_out_count_--;
-        const float ratio = pow(fade_out_count_ / (float)FADE_OUT_SAMPLES, 2);
-        samp *= ratio;
-        if(fade_out_count_ == 0)
+        float fade_out_gain
+            = static_cast<float>(fade_out_count_) / FADE_SAMPLES;
+        samp *= fade_out_gain;
+        // If we finished fading out or we're at a zero-crossing point, start
+        // fading in now
+        if(fade_out_count_ == 0 || (samp >= 0 && prev_samp_ < 0)
+           || (samp < 0 && prev_samp_ >= 0))
         {
-            last_sample_ = samp;
-            samp         = 0.0;
+            fade_out_count_ = 0;
+            fade_in_count_
+                = std::min(FADE_SAMPLES,
+                           half_buffer_size_ - (read_ptr_ % half_buffer_size_));
+            samp = 0.0;
+        }
+    }
+    // If we are fading in, increase gain of sample linearly
+    else if(fade_in_count_ > 0)
+    {
+        fade_in_count_--;
+        if(fade_in_count_ > 0)
+        {
+            float fade_in_gain
+                = 1.0 - static_cast<float>(fade_in_count_) / FADE_SAMPLES;
+            samp *= fade_in_gain;
         }
     }
 
@@ -124,30 +145,18 @@ float SampleReader::Process()
     {
         buff_state_ = BUFFER_STATE_PREPARE_1;
     }
-    else if(read_ptr_ == buff_size_ / 2)
+    else if(read_ptr_ == half_buffer_size_)
     {
         buff_state_ = BUFFER_STATE_PREPARE_0;
     }
 
-    // If we're changing buffers, force stop fading out. This shouldn't be
-    // necessary, because count should be 0 already, but just in case...
-    if(fade_out_count_ > 0 && (read_ptr_ == 0 || read_ptr_ == buff_size_ / 2))
-    {
-        fade_out_count_ = 0;
-        samp            = 0.0;
-    }
+    prev_samp_ = samp;
 
     return s162f(samp);
 }
 
 FRESULT SampleReader::Prepare()
 {
-    if(last_sample_ != INVALID_SAMPLE)
-    {
-        LOG("[Prepare] Last sample before fade out: %f", last_sample_);
-        last_sample_ = INVALID_SAMPLE;
-    }
-
     if(!playing_ || invalid_)
         return FR_OK;
 
@@ -203,9 +212,8 @@ FRESULT SampleReader::Restart()
     // If we were already playing another sample, start fading out. Calculate
     // count based on current read pointer and end of half-buffer (with
     // FADE_OUT_SAMPLES as max):
-    const size_t half_buffer_sz = buff_size_ / 2;
-    fade_out_count_             = std::min(FADE_OUT_SAMPLES,
-                               half_buffer_sz - (read_ptr_ % half_buffer_sz));
+    fade_out_count_ = std::min(
+        FADE_SAMPLES, half_buffer_size_ - (read_ptr_ % half_buffer_size_));
     LOG("[Open] Fading out %d samples", fade_out_count_);
     // playing_ = true;
 

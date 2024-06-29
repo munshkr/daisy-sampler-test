@@ -63,7 +63,7 @@ class SampleReader
         BUFFER_STATE_PREPARE_1,
     };
 
-    constexpr static size_t FADE_OUT_SAMPLES = 100;
+    constexpr static size_t FADE_SAMPLES = 48;
 
     FRESULT close();
 
@@ -75,11 +75,11 @@ class SampleReader
     size_t      data_pos_ = 0;
     FIL         fil_;
     int16_t*    buff_;
-    size_t      buff_size_ = 0;
+    size_t      buff_size_        = 0;
+    size_t      half_buffer_size_ = 0;
     BufferState buff_state_;
     size_t      read_ptr_       = 0;
     size_t      fade_out_count_ = 0;
-
-    constexpr static float INVALID_SAMPLE = 9999.0;
-    float                  last_sample_   = INVALID_SAMPLE;
+    size_t      fade_in_count_  = 0;
+    float       prev_samp_      = 0;
 };
