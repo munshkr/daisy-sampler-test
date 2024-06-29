@@ -108,35 +108,37 @@ float SampleReader::Process()
 
     int16_t samp = buff_[read_ptr_];
 
-    // If we are fading out, reduce gain of sample linearly
+    // If we are fading out, reduce gain of sample exponentially
     if(fade_out_count_ > 0)
     {
         fade_out_count_--;
-        float fade_out_gain
-            = static_cast<float>(fade_out_count_) / FADE_SAMPLES;
-        samp *= fade_out_gain;
-        // If we finished fading out or we're at a zero-crossing point, start
-        // fading in now
+        samp *= static_cast<float>(fade_out_count_) / FADE_SAMPLES;
+
+        // If we finished fading out, start waiting for zero crossing
         if(fade_out_count_ == 0 || (samp >= 0 && prev_samp_ < 0)
            || (samp < 0 && prev_samp_ >= 0))
         {
-            fade_out_count_ = 0;
+            fade_out_count_           = 0;
+            waiting_on_zero_crossing_ = true;
+        }
+    }
+    // If we are waiting for zero crossing, do nothing until we cross zero
+    else if(waiting_on_zero_crossing_)
+    {
+        if((samp >= 0 && prev_samp_ < 0) || (samp < 0 && prev_samp_ >= 0))
+        {
+            // Zero crossing detected, stop waiting and start fading in
+            waiting_on_zero_crossing_ = false;
             fade_in_count_
                 = std::min(FADE_SAMPLES,
                            half_buffer_size_ - (read_ptr_ % half_buffer_size_));
-            samp = 0.0;
         }
     }
-    // If we are fading in, increase gain of sample linearly
+    // If we are fading in, increase gain of sample exponentially
     else if(fade_in_count_ > 0)
     {
         fade_in_count_--;
-        if(fade_in_count_ > 0)
-        {
-            float fade_in_gain
-                = 1.0 - static_cast<float>(fade_in_count_) / FADE_SAMPLES;
-            samp *= fade_in_gain;
-        }
+        samp *= 1.0 - static_cast<float>(fade_in_count_) / FADE_SAMPLES;
     }
 
     // Increment read pointer
