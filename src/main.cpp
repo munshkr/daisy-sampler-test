@@ -20,7 +20,7 @@ constexpr float  SAMPLE_GAIN        = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL            = 0.75f;
 constexpr size_t BUFSIZE            = 1024 * 1024; // 1MB for all wavs
 // Sample buffer of size (NUM_SAMPLERS * 2) MB in external SDRAM
-int16_t DSY_SDRAM_BSS sample_buffers[NUM_SAMPLERS * BUFSIZE];
+int16_t DSY_SDRAM_BSS sample_buffers[NUM_SAMPLERS][BUFSIZE];
 SampleReader          sample_readers[NUM_SAMPLERS];
 
 
@@ -48,12 +48,11 @@ void InitSampleReaders()
 {
     LOG("Initialize sample readers (buffers)");
 
-    // Clear buffer, because this is defined on BSS in SDRAM
-    memset(sample_buffers, 0, NUM_SAMPLERS * BUFSIZE * sizeof(int16_t));
-
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
-        sample_readers[i].Init(sample_buffers + i * BUFSIZE, BUFSIZE, false);
+        // Clear buffer, because this is defined on BSS in SDRAM
+        memset(sample_buffers[i], 0, BUFSIZE * sizeof(int16_t));
+        sample_readers[i].Init(sample_buffers[i], BUFSIZE, false);
     }
 }
 
