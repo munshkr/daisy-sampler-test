@@ -90,7 +90,7 @@ FRESULT SampleReader::Open(std::string path)
 
     if(!stream_)
     {
-        Prepare(true);
+        prepareAll();
     }
 
     return res;
@@ -176,54 +176,18 @@ float SampleReader::Process()
     return s162f(samp);
 }
 
-FRESULT SampleReader::Prepare(bool force)
+FRESULT SampleReader::Prepare()
 {
-    if(!force && (!playing_ || invalid_))
+    if(!playing_ || invalid_)
         return FR_OK;
 
-    size_t offset, bytesread, rxsize;
-    bytesread = 0;
-
-    if(stream_)
+    // If we are in a prepare state, read the other half of the buffer
+    if(buff_state_ != BUFFER_STATE_IDLE)
     {
-        // If we are in a prepare state, read the other half of the buffer
-        if(buff_state_ != BUFFER_STATE_IDLE)
-        {
-            rxsize = (buff_size_ / 2) * sizeof(buff_[0]);
-            offset = buff_state_ == BUFFER_STATE_PREPARE_1 ? buff_size_ / 2 : 0;
-
-            FRESULT read_res
-                = f_read(&fil_, &buff_[offset], rxsize, &bytesread);
-            if(read_res != FR_OK)
-            {
-                LOG_ERROR("[Prepare] Failed to read file %s: %s",
-                          path_.c_str(),
-                          LogFsError(read_res));
-                return read_res;
-            }
-
-            if(bytesread < rxsize || f_eof(&fil_))
-            {
-                LOG("[Prepare] Reached end of file %s", path_.c_str());
-                if(looping_)
-                {
-                    LOG("[Prepare] Restarting file %s", path_.c_str());
-                    Restart();
-                }
-                else
-                {
-                    playing_ = false;
-                }
-            }
-
-            buff_state_ = BUFFER_STATE_IDLE;
-        }
-    }
-    else
-    {
-        // If we are not streaming, read the whole file into the buffer once
-        rxsize = buff_size_ * sizeof(buff_[0]);
-        offset = 0;
+        size_t offset, bytesread, rxsize;
+        bytesread = 0;
+        rxsize    = (buff_size_ / 2) * sizeof(buff_[0]);
+        offset    = buff_state_ == BUFFER_STATE_PREPARE_1 ? buff_size_ / 2 : 0;
 
         FRESULT read_res = f_read(&fil_, &buff_[offset], rxsize, &bytesread);
         if(read_res != FR_OK)
@@ -233,6 +197,22 @@ FRESULT SampleReader::Prepare(bool force)
                       LogFsError(read_res));
             return read_res;
         }
+
+        if(bytesread < rxsize || f_eof(&fil_))
+        {
+            LOG("[Prepare] Reached end of file %s", path_.c_str());
+            if(looping_)
+            {
+                LOG("[Prepare] Restarting file %s", path_.c_str());
+                Restart();
+            }
+            else
+            {
+                playing_ = false;
+            }
+        }
+
+        buff_state_ = BUFFER_STATE_IDLE;
     }
 
     return FR_OK;
@@ -275,4 +255,24 @@ FRESULT SampleReader::close()
     data_pos_ = 0;
     invalid_  = true;
     return f_close(&fil_);
+}
+
+FRESULT SampleReader::prepareAll()
+{
+    // Read the whole file into the buffer once
+    size_t offset, bytesread, rxsize;
+    bytesread = 0;
+    rxsize    = buff_size_ * sizeof(buff_[0]);
+    offset    = 0;
+
+    FRESULT read_res = f_read(&fil_, &buff_[offset], rxsize, &bytesread);
+    if(read_res != FR_OK)
+    {
+        LOG_ERROR("[Prepare] Failed to read file %s: %s",
+                  path_.c_str(),
+                  LogFsError(read_res));
+        return read_res;
+    }
+
+    return read_res;
 }

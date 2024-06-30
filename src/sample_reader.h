@@ -45,7 +45,7 @@ class SampleReader
     float Process();
 
     /** Collects buffer for playback when needed. */
-    FRESULT Prepare(bool force = false);
+    FRESULT Prepare();
 
     /** Resets the playback position to the beginning of the file immediately */
     FRESULT Restart();
@@ -72,6 +72,7 @@ class SampleReader
     constexpr static size_t FADE_SAMPLES = 480;
 
     FRESULT close();
+    FRESULT prepareAll();
 
     bool stream_ = true;
 
