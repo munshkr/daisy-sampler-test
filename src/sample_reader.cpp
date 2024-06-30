@@ -7,10 +7,11 @@
 
 using namespace daisy;
 
-void SampleReader::Init(int16_t* buff, size_t buff_size)
+void SampleReader::Init(int16_t* buff, size_t buff_size, bool stream)
 {
     assert(buff_size_ % 2 == 0);
 
+    stream_    = stream;
     buff_      = buff;
     buff_size_ = buff_size;
     path_      = "";
@@ -85,8 +86,12 @@ FRESULT SampleReader::Open(std::string path)
     }
 
     path_    = path;
-    playing_ = true;
     invalid_ = false;
+
+    if(!stream_)
+    {
+        Prepare(true);
+    }
 
     return res;
 }
@@ -95,6 +100,16 @@ FRESULT SampleReader::Close()
 {
     playing_ = false;
     return close();
+}
+
+void SampleReader::Start()
+{
+    playing_ = true;
+}
+
+void SampleReader::Stop()
+{
+    playing_ = false;
 }
 
 float SampleReader::Process()
@@ -143,13 +158,17 @@ float SampleReader::Process()
 
     // Increment read pointer
     read_ptr_ = (read_ptr_ + 1) % buff_size_;
-    if(read_ptr_ == 0)
+
+    if(stream_)
     {
-        buff_state_ = BUFFER_STATE_PREPARE_1;
-    }
-    else if(read_ptr_ == half_buffer_size_)
-    {
-        buff_state_ = BUFFER_STATE_PREPARE_0;
+        if(read_ptr_ == 0)
+        {
+            buff_state_ = BUFFER_STATE_PREPARE_1;
+        }
+        else if(read_ptr_ == half_buffer_size_)
+        {
+            buff_state_ = BUFFER_STATE_PREPARE_0;
+        }
     }
 
     prev_samp_ = samp;
@@ -157,17 +176,55 @@ float SampleReader::Process()
     return s162f(samp);
 }
 
-FRESULT SampleReader::Prepare()
+FRESULT SampleReader::Prepare(bool force)
 {
-    if(!playing_ || invalid_)
+    if(!force && (!playing_ || invalid_))
         return FR_OK;
 
-    if(buff_state_ != BUFFER_STATE_IDLE)
+    size_t offset, bytesread, rxsize;
+    bytesread = 0;
+
+    if(stream_)
     {
-        size_t offset, bytesread, rxsize;
-        bytesread = 0;
-        rxsize    = (buff_size_ / 2) * sizeof(buff_[0]);
-        offset    = buff_state_ == BUFFER_STATE_PREPARE_1 ? buff_size_ / 2 : 0;
+        // If we are in a prepare state, read the other half of the buffer
+        if(buff_state_ != BUFFER_STATE_IDLE)
+        {
+            rxsize = (buff_size_ / 2) * sizeof(buff_[0]);
+            offset = buff_state_ == BUFFER_STATE_PREPARE_1 ? buff_size_ / 2 : 0;
+
+            FRESULT read_res
+                = f_read(&fil_, &buff_[offset], rxsize, &bytesread);
+            if(read_res != FR_OK)
+            {
+                LOG_ERROR("[Prepare] Failed to read file %s: %s",
+                          path_.c_str(),
+                          LogFsError(read_res));
+                return read_res;
+            }
+
+            if(bytesread < rxsize || f_eof(&fil_))
+            {
+                LOG("[Prepare] Reached end of file %s", path_.c_str());
+                if(looping_)
+                {
+                    LOG("[Prepare] Restarting file %s", path_.c_str());
+                    Restart();
+                }
+                else
+                {
+                    playing_ = false;
+                }
+            }
+
+            buff_state_ = BUFFER_STATE_IDLE;
+        }
+    }
+    else
+    {
+        // If we are not streaming, read the whole file into the buffer once
+        rxsize = buff_size_ * sizeof(buff_[0]);
+        offset = 0;
+
         FRESULT read_res = f_read(&fil_, &buff_[offset], rxsize, &bytesread);
         if(read_res != FR_OK)
         {
@@ -176,22 +233,6 @@ FRESULT SampleReader::Prepare()
                       LogFsError(read_res));
             return read_res;
         }
-
-        if(bytesread < rxsize || f_eof(&fil_))
-        {
-            LOG("[Prepare] Reached end of file %s", path_.c_str());
-            if(looping_)
-            {
-                LOG("[Prepare] Restarting file %s", path_.c_str());
-                Restart();
-            }
-            else
-            {
-                playing_ = false;
-            }
-        }
-
-        buff_state_ = BUFFER_STATE_IDLE;
     }
 
     return FR_OK;
@@ -199,6 +240,12 @@ FRESULT SampleReader::Prepare()
 
 FRESULT SampleReader::Restart()
 {
+    if(!stream_)
+    {
+        read_ptr_ = 0;
+        return FR_OK;
+    }
+
     FRESULT res = f_lseek(&fil_, data_pos_);
     if(res != FR_OK)
     {

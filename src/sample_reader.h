@@ -23,7 +23,7 @@ class SampleReader
     ~SampleReader() {}
 
     /** Initializes the sampler buffer array and size */
-    void Init(int16_t* buff, size_t buff_size);
+    void Init(int16_t* buff, size_t buff_size, bool stream = true);
 
     /** Opens the file for reading.
     \param path File to open
@@ -35,11 +35,17 @@ class SampleReader
      */
     FRESULT Close();
 
+    /** Starts playback of the file. */
+    void Start();
+
+    /** Stops playback of the file. */
+    void Stop();
+
     /** \return The next sample if playing, otherwise returns 0 */
     float Process();
 
     /** Collects buffer for playback when needed. */
-    FRESULT Prepare();
+    FRESULT Prepare(bool force = false);
 
     /** Resets the playback position to the beginning of the file immediately */
     FRESULT Restart();
@@ -67,6 +73,8 @@ class SampleReader
 
     FRESULT close();
 
+    bool stream_ = true;
+
     bool playing_ = false;
     bool looping_ = false;
     bool invalid_ = false;
@@ -78,9 +86,11 @@ class SampleReader
     size_t      buff_size_        = 0;
     size_t      half_buffer_size_ = 0;
     BufferState buff_state_;
-    size_t      read_ptr_                 = 0;
-    size_t      fade_out_count_           = 0;
-    size_t      fade_in_count_            = 0;
-    bool        waiting_on_zero_crossing_ = false;
-    float       prev_samp_                = 0;
+    size_t      read_ptr_ = 0;
+
+    // Fade in/out
+    size_t fade_out_count_           = 0;
+    size_t fade_in_count_            = 0;
+    bool   waiting_on_zero_crossing_ = false;
+    float  prev_samp_                = 0;
 };

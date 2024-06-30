@@ -7,8 +7,6 @@
 #include "sample_reader.h"
 #include "logger.h"
 
-#define DSY_SDRAM_BSS __attribute__((section(".sdram_bss")))
-
 using namespace daisy;
 
 DaisyPod       pod;
@@ -16,13 +14,14 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t BUFSIZE      = 1024;
-constexpr size_t NUM_SAMPLERS = 6; // Sample polyphony
-constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
-constexpr float  MIX_VOL      = 0.75f;
-
-int16_t      sample_buffers[NUM_SAMPLERS][BUFSIZE];
-SampleReader sample_readers[NUM_SAMPLERS];
+constexpr size_t NUM_SAMPLERS       = 28; // Max number of samples on RAM
+constexpr size_t NUM_SAMPLER_VOICES = 11; // Number of voices to play
+constexpr float  SAMPLE_GAIN        = 1.0f / float(NUM_SAMPLERS);
+constexpr float  MIX_VOL            = 0.75f;
+constexpr size_t BUFSIZE            = 1024 * 1024; // 1MB for all wavs
+// Sample buffer of size (NUM_SAMPLERS * 2) MB in external SDRAM
+int16_t DSY_SDRAM_BSS sample_buffers[NUM_SAMPLERS * BUFSIZE];
+SampleReader          sample_readers[NUM_SAMPLERS];
 
 
 void InitMemoryCard()
@@ -49,24 +48,33 @@ void InitSampleReaders()
 {
     LOG("Initialize sample readers (buffers)");
 
+    // Clear buffer, because this is defined on BSS in SDRAM
+    memset(sample_buffers, 0, NUM_SAMPLERS * BUFSIZE * sizeof(int16_t));
+
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
-        // Clear buffer, just in case we set the buffer external RAM
-        memset(sample_buffers[i], 0, BUFSIZE * sizeof(int16_t));
-
-        sample_readers[i].Init(sample_buffers[i], BUFSIZE);
-        sample_readers[i].SetLooping(false);
+        sample_readers[i].Init(sample_buffers + i * BUFSIZE, BUFSIZE, false);
     }
 }
 
 void OpenAllSampleFiles()
 {
     LOG("Open all samples again");
+    const auto now = System::GetNow();
 
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
-        std::string filename = std::to_string(60 + i * 2) + ".wav";
+        std::string filename
+            = "maestro_concert_grand_v2/108/" + std::to_string(40 + i) + ".wav";
         sample_readers[i].Open(filename);
+    }
+
+    LOG("Open all samples took %d ms", System::GetNow() - now);
+
+    // Start all samples
+    for(size_t i = 0; i < NUM_SAMPLER_VOICES; i++)
+    {
+        sample_readers[i].Start();
     }
 }
 
@@ -74,7 +82,7 @@ void RestartAllSamples()
 {
     LOG("Restart all samples");
 
-    for(size_t i = 0; i < NUM_SAMPLERS; i++)
+    for(size_t i = 0; i < NUM_SAMPLER_VOICES; i++)
     {
         sample_readers[i].Restart();
     }
@@ -92,7 +100,7 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     {
         // Mix all samplers output together
         float s = 0.0f;
-        for(size_t j = 0; j < NUM_SAMPLERS; j++)
+        for(size_t j = 0; j < NUM_SAMPLER_VOICES; j++)
         {
             auto& reader = sample_readers[j];
             auto  samp   = reader.Process();
@@ -149,7 +157,7 @@ int main()
     OpenAllSampleFiles();
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(512);
+    pod.SetAudioBlockSize(128);
 
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
@@ -166,10 +174,10 @@ int main()
             RestartAllSamples();
         }
 
-        if(pod.button2.RisingEdge())
-        {
-            OpenAllSampleFiles();
-        }
+        // if(pod.button2.RisingEdge())
+        // {
+        //     OpenAllSampleFiles();
+        // }
 
         // Prepare buffers for samplers as needed
         for(size_t i = 0; i < NUM_SAMPLERS; i++)
