@@ -20,6 +20,7 @@ void SampleReader::Init(int16_t* buff, size_t buff_size, bool stream)
 
     // Reset the state, just in case
     read_ptr_       = 0;
+    read_index_     = 0;
     data_pos_       = 0;
     playing_        = false;
     looping_        = false;
@@ -32,13 +33,11 @@ void SampleReader::Init(int16_t* buff, size_t buff_size, bool stream)
 
 FRESULT SampleReader::Open(std::string path)
 {
-    // NOTE: This is an optimization ot avoid re-opening the same file, but it
-    // is commented out now because we want to compare in this example:
-    // if(path_ == path)
-    // {
-    //     Restart();
-    //     return FR_OK;
-    // }
+    if(path_ == path)
+    {
+        Restart();
+        return FR_OK;
+    }
 
     close();
 
@@ -102,6 +101,18 @@ FRESULT SampleReader::Close()
     return close();
 }
 
+void SampleReader::SetBaseFreq(float freq)
+{
+    base_freq_ = freq;
+    calcResampFactor();
+}
+
+void SampleReader::SetTargetFreq(float freq)
+{
+    target_freq_ = freq;
+    calcResampFactor();
+}
+
 void SampleReader::Start()
 {
     playing_ = true;
@@ -116,12 +127,18 @@ float SampleReader::Process()
 {
     if(!playing_)
     {
-        if(looping_)
+        if(looping_ && !invalid_)
             playing_ = true;
         return 0.0;
     }
 
-    int16_t samp = buff_[read_ptr_];
+    // Interpolate between samples
+    float   frac = read_index_ - read_ptr_;
+    int16_t samp = interpolate(read_ptr_, frac);
+    read_index_ += resamp_factor_;
+    if(read_index_ >= buff_size_)
+        read_index_ -= buff_size_;
+    read_ptr_ = static_cast<size_t>(read_index_);
 
     // If we are fading out, reduce gain of sample exponentially
     if(fade_out_count_ > 0)
@@ -155,9 +172,6 @@ float SampleReader::Process()
         fade_in_count_--;
         samp *= 1.0 - static_cast<float>(fade_in_count_) / FADE_SAMPLES;
     }
-
-    // Increment read pointer
-    read_ptr_ = (read_ptr_ + 1) % buff_size_;
 
     if(stream_)
     {
@@ -222,7 +236,7 @@ FRESULT SampleReader::Restart()
 {
     if(!stream_)
     {
-        read_ptr_ = 0;
+        read_index_ = 0;
         return FR_OK;
     }
 
@@ -275,4 +289,18 @@ FRESULT SampleReader::prepareAll()
     }
 
     return read_res;
+}
+
+void SampleReader::calcResampFactor()
+{
+    resamp_factor_ = target_freq_ / base_freq_;
+}
+
+int16_t SampleReader::interpolate(size_t index, float frac)
+{
+    size_t  idx0 = static_cast<size_t>(index);
+    size_t  idx1 = idx0 + 1 < buff_size_ ? idx0 + 1 : 0;
+    int16_t y0   = buff_[idx0];
+    int16_t y1   = buff_[idx1];
+    return y0 * (1 - frac) + y1 * frac;
 }

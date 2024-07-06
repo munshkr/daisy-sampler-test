@@ -25,6 +25,8 @@ class SampleReader
     /** Initializes the sampler buffer array and size */
     void Init(int16_t* buff, size_t buff_size, bool stream = true);
 
+    void SetSampleRate(float sr) { sample_rate_ = sr; }
+
     /** Opens the file for reading.
     \param path File to open
      */
@@ -34,6 +36,16 @@ class SampleReader
     \return &
      */
     FRESULT Close();
+
+    /** Sets the base frequency of the file.
+     * \param freq Frequency in Hz
+     */
+    void SetBaseFreq(float freq);
+
+    /** Sets the target frequency of the file to resample to.
+     * \param freq Frequency in Hz
+     */
+    void SetTargetFreq(float freq);
 
     /** Starts playback of the file. */
     void Start();
@@ -73,9 +85,10 @@ class SampleReader
 
     FRESULT close();
     FRESULT prepareAll();
+    void    calcResampFactor();
+    int16_t interpolate(size_t index, float frac);
 
-    bool stream_ = true;
-
+    bool stream_  = true;
     bool playing_ = false;
     bool looping_ = false;
     bool invalid_ = false;
@@ -94,4 +107,11 @@ class SampleReader
     size_t fade_in_count_            = 0;
     bool   waiting_on_zero_crossing_ = false;
     float  prev_samp_                = 0;
+
+    // Resampling
+    float base_freq_     = 440.0f;
+    float target_freq_   = 440.0f;
+    float resamp_factor_ = 1.0f;
+    float sample_rate_   = 48000.0f;
+    float read_index_    = 0.0f;
 };

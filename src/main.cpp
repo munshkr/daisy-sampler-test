@@ -1,6 +1,7 @@
 #define MEASURE_LOAD 1
 
 #include <string>
+#include <cmath>
 
 #include "daisy_pod.h"
 #include "fatfs_utils.h"
@@ -14,7 +15,7 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t NUM_SAMPLERS       = 28; // Max number of samples on RAM
+constexpr size_t NUM_SAMPLERS       = 11; // Max number of samples on RAM
 constexpr size_t NUM_SAMPLER_VOICES = 11; // Number of voices to play
 constexpr float  SAMPLE_GAIN        = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL            = 0.75f;
@@ -69,12 +70,6 @@ void OpenAllSampleFiles()
     }
 
     LOG("Open all samples took %d ms", System::GetNow() - now);
-
-    // Start all samples
-    for(size_t i = 0; i < NUM_SAMPLER_VOICES; i++)
-    {
-        sample_readers[i].Start();
-    }
 }
 
 void RestartAllSamples()
@@ -85,6 +80,12 @@ void RestartAllSamples()
     {
         sample_readers[i].Restart();
     }
+}
+
+// Function to calculate the frequency of a MIDI note
+float MidiNoteToFrequency(int midiNote)
+{
+    return 440.0f * std::pow(2.0f, (midiNote - 69) / 12.0f);
 }
 
 void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
@@ -158,11 +159,24 @@ int main()
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     pod.SetAudioBlockSize(128);
 
+    sample_readers[0].SetSampleRate(pod.AudioSampleRate());
+    sample_readers[0].SetBaseFreq(MidiNoteToFrequency(40));
+    sample_readers[0].SetTargetFreq(MidiNoteToFrequency(40));
+
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
 #endif
 
     pod.StartAudio(AudioCallback);
+
+    // // Start all samples
+    // for(size_t i = 0; i < NUM_SAMPLER_VOICES; i++)
+    // {
+    //     sample_readers[i].Start();
+    // }
+
+    sample_readers[0].Start();
+    size_t target_note = 40;
 
     for(;;)
     {
@@ -170,7 +184,10 @@ int main()
 
         if(pod.button1.RisingEdge())
         {
-            RestartAllSamples();
+            // RestartAllSamples();
+            target_note++;
+            sample_readers[0].SetTargetFreq(MidiNoteToFrequency(target_note));
+            sample_readers[0].Restart();
         }
 
         // if(pod.button2.RisingEdge())
