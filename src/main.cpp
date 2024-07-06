@@ -15,6 +15,8 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
+Parameter p_freq;
+
 constexpr size_t NUM_SAMPLERS       = 11; // Max number of samples on RAM
 constexpr size_t NUM_SAMPLER_VOICES = 11; // Number of voices to play
 constexpr float  SAMPLE_GAIN        = 1.0f / float(NUM_SAMPLERS);
@@ -24,6 +26,11 @@ constexpr size_t BUFSIZE            = 1024 * 1024; // 1MB for all wavs
 int16_t DSY_SDRAM_BSS sample_buffers[NUM_SAMPLERS][BUFSIZE];
 SampleReader          sample_readers[NUM_SAMPLERS];
 
+
+inline bool compare(float a, float b, float tol = 0.0001)
+{
+    return std::abs(a - b) < tol;
+}
 
 void InitMemoryCard()
 {
@@ -60,12 +67,14 @@ void InitSampleReaders()
 void OpenAllSampleFiles()
 {
     LOG("Open all samples again");
+#ifdef LOGGER
     const auto now = System::GetNow();
+#endif
 
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
         std::string filename
-            = "maestro_concert_grand_v2/108/" + std::to_string(40 + i) + ".wav";
+            = "maestro_concert_grand_v2/108/" + std::to_string(69 + i) + ".wav";
         sample_readers[i].Open(filename);
     }
 
@@ -117,7 +126,7 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
 
 void TimerCallback(void* data)
 {
-#if defined(MEASURE_LOAD)
+#if defined(MEASURE_LOAD) && defined(LOGGER)
     // Print average load (in percentage)
     const float avgLoad = loadMeter.GetAvgCpuLoad();
     const float minLoad = loadMeter.GetMinCpuLoad();
@@ -159,14 +168,17 @@ int main()
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     pod.SetAudioBlockSize(128);
 
+    p_freq.Init(pod.knob1, 350.0, 587.3, Parameter::EXPONENTIAL);
+
     sample_readers[0].SetSampleRate(pod.AudioSampleRate());
-    sample_readers[0].SetBaseFreq(MidiNoteToFrequency(40));
-    sample_readers[0].SetTargetFreq(MidiNoteToFrequency(40));
+    sample_readers[0].SetBaseFreq(MidiNoteToFrequency(69));
+    sample_readers[0].SetTargetFreq(MidiNoteToFrequency(69));
 
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
 #endif
 
+    pod.StartAdc();
     pod.StartAudio(AudioCallback);
 
     // // Start all samples
@@ -175,20 +187,25 @@ int main()
     //     sample_readers[i].Start();
     // }
 
-    size_t target_note = 40;
+    // size_t target_note = 40;
 
     System::Delay(1000);
     sample_readers[0].Start();
 
+    float prev_value = p_freq.Process();
+    float new_value  = prev_value;
+
     for(;;)
     {
-        pod.ProcessDigitalControls();
+        pod.ProcessAllControls();
+
+        new_value = p_freq.Process();
 
         if(pod.button1.RisingEdge())
         {
             // RestartAllSamples();
-            target_note++;
-            sample_readers[0].SetTargetFreq(MidiNoteToFrequency(target_note));
+            // target_note++;
+            // sample_readers[0].SetTargetFreq(MidiNoteToFrequency(target_note));
             sample_readers[0].Restart();
         }
 
@@ -196,6 +213,12 @@ int main()
         // {
         //     OpenAllSampleFiles();
         // }
+
+        if(!compare(prev_value, new_value))
+        {
+            sample_readers[0].SetTargetFreq(new_value);
+            prev_value = new_value;
+        }
 
         // Prepare buffers for samplers as needed
         for(size_t i = 0; i < NUM_SAMPLERS; i++)
