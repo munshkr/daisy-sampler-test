@@ -134,7 +134,7 @@ float SampleReader::Process()
 
     // Interpolate between samples
     float   frac = read_index_ - read_ptr_;
-    int16_t samp = interpolate(read_ptr_, frac);
+    int16_t samp = cubicInterpolate(read_ptr_, frac);
     read_index_ += resamp_factor_;
     if(read_index_ >= buff_size_)
         read_index_ -= buff_size_;
@@ -302,11 +302,33 @@ void SampleReader::calcResampFactor()
     resamp_factor_ = target_freq_ / base_freq_;
 }
 
-int16_t SampleReader::interpolate(size_t index, float frac)
+int16_t SampleReader::linearInterpolate(size_t index, float frac)
 {
-    size_t  idx0 = static_cast<size_t>(index);
-    size_t  idx1 = idx0 + 1 < buff_size_ ? idx0 + 1 : 0;
-    int16_t y0   = buff_[idx0];
-    int16_t y1   = buff_[idx1];
+    size_t idx0 = static_cast<size_t>(index);
+    size_t idx1 = idx0 + 1 < buff_size_ ? idx0 + 1 : 0;
+
+    int16_t y0 = buff_[idx0];
+    int16_t y1 = buff_[idx1];
+
     return y0 * (1 - frac) + y1 * frac;
+}
+
+int16_t SampleReader::cubicInterpolate(size_t index, float frac)
+{
+    size_t idx0 = static_cast<size_t>(index);
+    size_t idx1 = idx0 + 1 < buff_size_ ? idx0 + 1 : 0;
+    size_t idx2 = idx1 + 1 < buff_size_ ? idx1 + 1 : 0;
+    size_t idx3 = idx2 + 1 < buff_size_ ? idx2 + 1 : 0;
+
+    int16_t y0 = buff_[idx0];
+    int16_t y1 = buff_[idx1];
+    int16_t y2 = buff_[idx2];
+    int16_t y3 = buff_[idx3];
+
+    float a0 = y3 - y2 - y0 + y1;
+    float a1 = y0 - y1 - a0;
+    float a2 = y2 - y0;
+    float a3 = y1;
+
+    return a0 * frac * frac * frac + a1 * frac * frac + a2 * frac + a3;
 }

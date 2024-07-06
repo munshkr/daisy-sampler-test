@@ -86,7 +86,8 @@ class SampleReader
     FRESULT close();
     FRESULT prepareAll();
     void    calcResampFactor();
-    int16_t interpolate(size_t index, float frac);
+    int16_t linearInterpolate(size_t index, float frac);
+    int16_t cubicInterpolate(size_t index, float frac);
 
     bool stream_     = true;
     bool playing_    = false;
