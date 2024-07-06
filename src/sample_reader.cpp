@@ -169,6 +169,12 @@ float SampleReader::Process()
     // If we are fading in, increase gain of sample exponentially
     else if(fade_in_count_ > 0)
     {
+        // If we restarted, we should reset read_index_ to 0
+        if(restarting_)
+        {
+            read_index_ = 0;
+            restarting_ = false;
+        }
         fade_in_count_--;
         samp *= 1.0 - static_cast<float>(fade_in_count_) / FADE_SAMPLES;
     }
@@ -234,21 +240,19 @@ FRESULT SampleReader::Prepare()
 
 FRESULT SampleReader::Restart()
 {
-    if(!stream_)
-    {
-        read_index_ = 0;
-        return FR_OK;
-    }
+    FRESULT res = FR_OK;
 
-    FRESULT res = f_lseek(&fil_, data_pos_);
-    if(res != FR_OK)
+    if(stream_)
     {
-        LOG_ERROR("[Restart]: Failed to seek to %d, result: %s",
-                  data_pos_,
-                  LogFsError(res));
-    }
-    else
-    {
+        res = f_lseek(&fil_, data_pos_);
+        if(res != FR_OK)
+        {
+            LOG_ERROR("[Restart]: Failed to seek to %d, result: %s",
+                      data_pos_,
+                      LogFsError(res));
+            return res;
+        }
+
         LOG("[Restart]: Seeked to %d, result: %s", data_pos_, LogFsError(res));
     }
 
@@ -259,6 +263,8 @@ FRESULT SampleReader::Restart()
         FADE_SAMPLES, half_buffer_size_ - (read_ptr_ % half_buffer_size_));
     LOG("[Open] Fading out %d samples", fade_out_count_);
     // playing_ = true;
+
+    restarting_ = true;
 
     return res;
 }

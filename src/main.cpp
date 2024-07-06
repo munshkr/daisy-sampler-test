@@ -175,8 +175,10 @@ int main()
     //     sample_readers[i].Start();
     // }
 
-    sample_readers[0].Start();
     size_t target_note = 40;
+
+    System::Delay(1000);
+    sample_readers[0].Start();
 
     for(;;)
     {

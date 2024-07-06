@@ -88,10 +88,11 @@ class SampleReader
     void    calcResampFactor();
     int16_t interpolate(size_t index, float frac);
 
-    bool stream_  = true;
-    bool playing_ = false;
-    bool looping_ = false;
-    bool invalid_ = false;
+    bool stream_     = true;
+    bool playing_    = false;
+    bool looping_    = false;
+    bool invalid_    = false;
+    bool restarting_ = false;
 
     std::string path_;
     size_t      data_pos_ = 0;
