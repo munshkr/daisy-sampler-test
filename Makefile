@@ -5,6 +5,7 @@ TARGET = sampler_test
 CPP_SOURCES = \
 	src/main.cpp \
 	src/fatfs_utils.cpp \
+	src/request_manager.cpp \
 	src/sample_reader.cpp \
 
 # Library Locations

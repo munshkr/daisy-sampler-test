@@ -13,17 +13,15 @@
 #include "daisy_core.h"
 #include "daisy_seed.h"
 #include "ff.h"
+#include "request_manager.h"
 
 /** WAV Player that opens a .wav file with FatFS and provides a method of
 reading it with double-buffering. */
-class SampleReader
+class SampleReader : public Requester
 {
   public:
-    SampleReader() {}
-    ~SampleReader() {}
-
     /** Initializes the sampler buffer array and size */
-    void Init(int16_t* buff, size_t buff_size);
+    void Init(int16_t *buff, int16_t *temp_buff, size_t buff_size);
 
     /** Opens the file for reading.
     \param path File to open
@@ -47,14 +45,6 @@ class SampleReader
     /** \return Whether the path of the open file, if any. */
     std::string GetPath() const { return path_; }
 
-    /** Sets whether or not the current file will repeat after completing playback.
-    \param loop To loop or not to loop.
-    */
-    inline void SetLooping(bool loop) { looping_ = loop; }
-
-    /** \return Whether the sampler is looping or not. */
-    inline bool GetLooping() const { return looping_; }
-
   private:
     enum BufferState
     {
@@ -74,7 +64,8 @@ class SampleReader
     std::string path_;
     size_t      data_pos_ = 0;
     FIL         fil_;
-    int16_t*    buff_;
+    int16_t    *buff_;
+
     size_t      buff_size_        = 0;
     size_t      half_buffer_size_ = 0;
     BufferState buff_state_;
@@ -83,4 +74,13 @@ class SampleReader
     size_t      fade_in_count_            = 0;
     bool        waiting_on_zero_crossing_ = false;
     float       prev_samp_                = 0;
+
+    size_t   loaded_ptr_  = 0; // points to the last sample loaded in the buffer
+    size_t   load_thresh_ = 0; // threshold for when to load more samples
+    int16_t *temp_buff_;       // temporary buffer to store data from f_read
+
+    /** \return The number of samples left to consume from the buffer */
+    size_t getNumSamplesLeft() const;
+
+    void requestNewSamples(size_t num_samples);
 };

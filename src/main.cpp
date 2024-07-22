@@ -22,13 +22,15 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t BUFSIZE      = 1024;
-constexpr size_t NUM_SAMPLERS = 16; // Sample polyphony
+constexpr size_t BUFSIZE      = 8192;
+constexpr size_t NUM_SAMPLERS = 1; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
 
-int16_t      sample_buffers[NUM_SAMPLERS][BUFSIZE];
-SampleReader sample_readers[NUM_SAMPLERS];
+RequestManager request_manager;
+int16_t        sample_buffers[NUM_SAMPLERS][BUFSIZE];
+int16_t        sample_temp_buffers[NUM_SAMPLERS][BUFSIZE];
+SampleReader   sample_readers[NUM_SAMPLERS];
 
 
 void InitMemoryCard()
@@ -60,8 +62,9 @@ void InitSampleReaders()
         // Clear buffer, just in case we set the buffer external RAM
         memset(sample_buffers[i], 0, BUFSIZE * sizeof(int16_t));
 
-        sample_readers[i].Init(sample_buffers[i], BUFSIZE);
-        sample_readers[i].SetLooping(false);
+        sample_readers[i].Init(
+            sample_buffers[i], sample_temp_buffers[i], BUFSIZE);
+        sample_readers[i].SetRequestManager(&request_manager);
     }
 }
 
@@ -155,7 +158,7 @@ int main()
     OpenAllSampleFiles();
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(512);
+    pod.SetAudioBlockSize(128);
 
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
@@ -178,9 +181,11 @@ int main()
         }
 
         // Prepare buffers for samplers as needed
-        for(size_t i = 0; i < NUM_SAMPLERS; i++)
-        {
-            sample_readers[i].Prepare();
-        }
+        // for(size_t i = 0; i < NUM_SAMPLERS; i++)
+        // {
+        //     sample_readers[i].Prepare();
+        // }
+
+        request_manager.HandleRequests();
     }
 }
