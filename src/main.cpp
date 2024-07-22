@@ -9,6 +9,12 @@
 
 #define DSY_SDRAM_BSS __attribute__((section(".sdram_bss")))
 
+template <typename T>
+T clamp(T in, T low, T high)
+{
+    return (in < low) ? low : (high < in) ? high : in;
+}
+
 using namespace daisy;
 
 DaisyPod       pod;
@@ -17,9 +23,9 @@ FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
 constexpr size_t BUFSIZE      = 1024;
-constexpr size_t NUM_SAMPLERS = 6; // Sample polyphony
+constexpr size_t NUM_SAMPLERS = 16; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
-constexpr float  MIX_VOL      = 0.75f;
+constexpr float  MIX_VOL      = 1.0f;
 
 int16_t      sample_buffers[NUM_SAMPLERS][BUFSIZE];
 SampleReader sample_readers[NUM_SAMPLERS];
@@ -65,7 +71,7 @@ void OpenAllSampleFiles()
 
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
-        std::string filename = std::to_string(60 + i * 2) + ".wav";
+        std::string filename = std::to_string(40 + i * 2) + ".wav";
         sample_readers[i].Open(filename);
     }
 }
@@ -99,7 +105,7 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
             TURN_LED_ON(samp == 0);
             s += samp * SAMPLE_GAIN;
         }
-        out[i] = out[i + 1] = s * MIX_VOL;
+        out[i] = out[i + 1] = clamp(s * MIX_VOL, -1.0f, 1.0f);
     }
 
 #ifdef MEASURE_LOAD
