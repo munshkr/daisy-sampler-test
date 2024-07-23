@@ -4,7 +4,7 @@
 
 using namespace daisy;
 
-constexpr size_t FIFO_SIZE = 4096;
+constexpr size_t FIFO_SIZE = 8192;
 
 class RequestManager;
 struct Request;

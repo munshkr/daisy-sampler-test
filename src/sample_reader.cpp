@@ -69,9 +69,22 @@ FRESULT SampleReader::Close()
 
 float SampleReader::Process()
 {
-    if(!playing_ || fifo_.IsEmpty())
+    if(!playing_)
     {
         return 0.0;
+    }
+
+    if(fifo_.IsEmpty())
+    {
+        underrun_samples_++;
+        underrun_total_samples++;
+        return 0.0;
+    }
+
+    if(underrun_samples_ > 0)
+    {
+        underruns++;
+        underrun_samples_ = 0;
     }
 
     int16_t samp = fifo_.PopFront();

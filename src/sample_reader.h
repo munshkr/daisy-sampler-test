@@ -39,6 +39,9 @@ class SampleReader : public Requester
     /** \return Whether the path of the open file, if any. */
     std::string GetPath() const { return path_; }
 
+    size_t underruns = 0; // Number of times we've underrun the FIFO
+    size_t underrun_total_samples = 0; // Total number of samples underrun.
+
   private:
     static constexpr float LOAD_THRESHOLD_RATIO
         = 0.25f; // i.e. 1/4 of buffer size
@@ -56,4 +59,6 @@ class SampleReader : public Requester
 
     FIFO<int16_t, FIFO_SIZE> fifo_;
     int16_t temp_buff_[FIFO_SIZE]; // temp buffer to store data from f_read
+
+    size_t underrun_samples_ = 0; // Number of samples we've underrun so far.
 };

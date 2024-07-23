@@ -119,6 +119,21 @@ void TimerCallback(void* data)
         static_cast<int>(avgLoad * 100),
         static_cast<int>(minLoad * 100),
         static_cast<int>(maxLoad * 100));
+
+    // Print underruns of sample readers
+    for(size_t i = 0; i < NUM_SAMPLERS; i++)
+    {
+        auto& reader = sample_readers[i];
+        if(reader.underruns > 0)
+        {
+            LOG("SampleReader %d underrun %d times (%d total samples)",
+                i,
+                reader.underruns,
+                reader.underrun_total_samples);
+        }
+        reader.underruns              = 0;
+        reader.underrun_total_samples = 0;
+    }
 #endif
 }
 
