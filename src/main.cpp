@@ -22,7 +22,7 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t NUM_SAMPLERS = 1; // Sample polyphony
+constexpr size_t NUM_SAMPLERS = 8; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
 
@@ -141,6 +141,10 @@ int main()
 {
     pod.Init();
 
+    pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
+    pod.SetAudioBlockSize(64);
+    pod.StartAudio(AudioCallback);
+
     START_LOG();
 
     InitMemoryCard();
@@ -149,14 +153,10 @@ int main()
 
     OpenAllSampleFiles();
 
-    pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(128);
-
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
 #endif
 
-    pod.StartAudio(AudioCallback);
 
     for(;;)
     {

@@ -79,14 +79,16 @@ float SampleReader::Process()
     // Load new samples if we're running low...
     // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
     // voices if possible).
+
     const size_t num_samples_left = fifo_.GetNumElements();
+    // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
     {
         const size_t num_samples_to_request = FIFO_SIZE - num_samples_left;
-        LOG("[Process] Requesting %d new samples (only %d left)",
-            num_samples_to_request,
-            num_samples_left);
+        // LOG("[Process] Requesting %d new samples (only %d left)",
+        //     num_samples_to_request,
+        //     num_samples_left);
         requestNewSamples(num_samples_to_request);
     }
 

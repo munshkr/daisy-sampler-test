@@ -12,7 +12,10 @@ void Requester::PushRequest(const Request& req)
 
 void RequestManager::PushRequest(const Request& req)
 {
-    request_queue_.PushBack(req);
+    if(!request_queue_.PushBack(req))
+    {
+        LOG_ERROR("Request queue is full!");
+    }
 }
 
 void RequestManager::HandleRequests()
@@ -30,7 +33,7 @@ void RequestManager::HandleRequests()
             size_t bytes_read = 0;
 
             // First read into temporary buffer
-            LOG("Reading %d samples from file", req.num_samples);
+            // LOG("Reading %d samples from file", req.num_samples);
             FRESULT read_res = f_read(req.file,
                                       req.temp_buffer,
                                       req.num_samples * sizeof(int16_t),
