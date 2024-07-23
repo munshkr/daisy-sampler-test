@@ -41,40 +41,11 @@ void RequestManager::HandleRequests()
                           LogFsError(read_res));
             }
 
-            // Copy from temporary buffer to the main buffer.
-
-            // If num_samples is greater than the number of samples left in the
-            // buffer, then we need to do two memcpy's, one for the remaining
-            // samples in the buffer, and a second one for the remaining samples
-            // in the temporary buffer into the beginning of the buffer.
-            if(bytes_read > 0)
+            // Push read samples into FIFO
+            for(size_t i = 0; i < req.num_samples; i++)
             {
-                size_t samples_to_copy = bytes_read / sizeof(int16_t);
-                size_t samples_left    = req.buffer_size - *req.loaded_ptr;
-
-                if(samples_to_copy > samples_left)
-                {
-                    // Copy the remaining samples in the buffer
-                    memcpy(req.buffer + *req.loaded_ptr,
-                           req.temp_buffer,
-                           samples_left * sizeof(int16_t));
-
-                    // Copy the remaining samples in the temporary buffer
-                    memcpy(req.buffer,
-                           req.temp_buffer + samples_left,
-                           (samples_to_copy - samples_left) * sizeof(int16_t));
-                }
-                else
-                {
-                    // Copy all samples into the buffer
-                    memcpy(req.buffer + *req.loaded_ptr,
-                           req.temp_buffer,
-                           samples_to_copy * sizeof(int16_t));
-                }
+                req.fifo->PushBack(req.temp_buffer[i]);
             }
-
-            // Update loaded_ptr
-            *req.loaded_ptr = (bytes_read * sizeof(int16_t)) % req.buffer_size;
 
             break;
         }

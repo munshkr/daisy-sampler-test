@@ -20,9 +20,6 @@ reading it with double-buffering. */
 class SampleReader : public Requester
 {
   public:
-    /** Initializes the sampler buffer array and size */
-    void Init(int16_t *buff, int16_t *temp_buff, size_t buff_size);
-
     /** Opens the file for reading.
     \param path File to open
      */
@@ -36,9 +33,6 @@ class SampleReader : public Requester
     /** \return The next sample if playing, otherwise returns 0 */
     float Process();
 
-    /** Collects buffer for playback when needed. */
-    FRESULT Prepare();
-
     /** Resets the playback position to the beginning of the file immediately */
     FRESULT Restart();
 
@@ -46,41 +40,20 @@ class SampleReader : public Requester
     std::string GetPath() const { return path_; }
 
   private:
-    enum BufferState
-    {
-        BUFFER_STATE_IDLE,
-        BUFFER_STATE_PREPARE_0,
-        BUFFER_STATE_PREPARE_1,
-    };
+    static constexpr float LOAD_THRESHOLD_RATIO
+        = 0.25f; // i.e. 1/4 of buffer size
+    static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE * LOAD_THRESHOLD_RATIO;
 
-    constexpr static size_t FADE_SAMPLES = 480;
-
+    void    requestNewSamples(size_t num_samples);
     FRESULT close();
 
     bool playing_ = false;
-    bool looping_ = false;
     bool invalid_ = false;
 
     std::string path_;
     size_t      data_pos_ = 0;
     FIL         fil_;
-    int16_t    *buff_;
 
-    size_t      buff_size_        = 0;
-    size_t      half_buffer_size_ = 0;
-    BufferState buff_state_;
-    size_t      read_ptr_                 = 0;
-    size_t      fade_out_count_           = 0;
-    size_t      fade_in_count_            = 0;
-    bool        waiting_on_zero_crossing_ = false;
-    float       prev_samp_                = 0;
-
-    size_t   loaded_ptr_  = 0; // points to the last sample loaded in the buffer
-    size_t   load_thresh_ = 0; // threshold for when to load more samples
-    int16_t *temp_buff_;       // temporary buffer to store data from f_read
-
-    /** \return The number of samples left to consume from the buffer */
-    size_t getNumSamplesLeft() const;
-
-    void requestNewSamples(size_t num_samples);
+    FIFO<int16_t, FIFO_SIZE> fifo_;
+    int16_t temp_buff_[FIFO_SIZE]; // temp buffer to store data from f_read
 };
