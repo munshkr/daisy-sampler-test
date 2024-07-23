@@ -34,10 +34,9 @@ void RequestManager::HandleRequests()
 
             // First read into temporary buffer
             // LOG("Reading %d samples from file", req.num_samples);
-            FRESULT read_res = f_read(req.file,
-                                      req.temp_buffer,
-                                      req.num_samples * sizeof(int16_t),
-                                      &bytes_read);
+            size_t  bytes_to_read = req.num_samples * sizeof(int16_t);
+            FRESULT read_res
+                = f_read(req.file, req.temp_buffer, bytes_to_read, &bytes_read);
             if(read_res != FR_OK)
             {
                 LOG_ERROR("[Read] Failed to read file: %s",
@@ -45,7 +44,8 @@ void RequestManager::HandleRequests()
             }
 
             // Push read samples into FIFO
-            for(size_t i = 0; i < bytes_read / sizeof(int16_t); i++)
+            size_t samples_read = bytes_read / sizeof(int16_t);
+            for(size_t i = 0; i < samples_read; i++)
             {
                 req.fifo->PushBack(req.temp_buffer[i]);
             }
