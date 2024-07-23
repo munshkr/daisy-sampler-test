@@ -34,7 +34,7 @@ class SampleReader : public Requester
     float Process();
 
     /** Resets the playback position to the beginning of the file immediately */
-    FRESULT Restart();
+    void Restart();
 
     /** \return Whether the path of the open file, if any. */
     std::string GetPath() const { return path_; }
@@ -47,8 +47,9 @@ class SampleReader : public Requester
         = 0.25f; // i.e. 1/4 of buffer size
     static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE * LOAD_THRESHOLD_RATIO;
 
-    void    requestNewSamples(size_t num_samples);
     FRESULT close();
+    void    requestNewSamples(size_t num_samples);
+    void    requestRestart();
 
     bool playing_ = false;
     bool invalid_ = false;

@@ -172,7 +172,6 @@ int main()
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
 #endif
 
-
     for(;;)
     {
         pod.ProcessDigitalControls();
@@ -187,6 +186,6 @@ int main()
             OpenAllSampleFiles();
         }
 
-        request_manager.HandleRequests();
+        request_manager.HandleRequest();
     }
 }

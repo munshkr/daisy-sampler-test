@@ -18,10 +18,10 @@ void RequestManager::PushRequest(const Request& req)
     }
 }
 
-void RequestManager::HandleRequests()
+bool RequestManager::HandleRequest()
 {
     if(request_queue_.IsEmpty())
-        return;
+        return false;
 
     auto req = request_queue_.PopFront();
     switch(req.type)
@@ -54,7 +54,19 @@ void RequestManager::HandleRequests()
         }
         case Request::Type::Seek:
         {
-            // TODO: do fseek,
+            FRESULT res = f_lseek(req.file, req.seek_pos);
+            if(res != FR_OK)
+            {
+                LOG_ERROR("[Seek] Failed to seek to %d, result: %s",
+                          req.seek_pos,
+                          LogFsError(res));
+            }
+            else
+            {
+                LOG("[Seek] Seeked to %d, result: %s",
+                    req.seek_pos,
+                    LogFsError(res));
+            }
             break;
         }
         default:
@@ -65,4 +77,5 @@ void RequestManager::HandleRequests()
     }
 
     req.requester->AckRequest();
+    return true;
 }

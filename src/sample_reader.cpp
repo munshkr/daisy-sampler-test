@@ -108,6 +108,20 @@ float SampleReader::Process()
     return s162f(samp);
 }
 
+void SampleReader::Restart()
+{
+    requestRestart();
+    requestNewSamples(FIFO_SIZE / 2);
+}
+
+FRESULT SampleReader::close()
+{
+    path_     = "";
+    data_pos_ = 0;
+    invalid_  = true;
+    return f_close(&fil_);
+}
+
 void SampleReader::requestNewSamples(const size_t num_samples)
 {
     if(num_samples == 0)
@@ -126,31 +140,12 @@ void SampleReader::requestNewSamples(const size_t num_samples)
     PushRequest(req);
 }
 
-FRESULT SampleReader::Restart()
+void SampleReader::requestRestart()
 {
-    FRESULT res = f_lseek(&fil_, data_pos_);
-    if(res != FR_OK)
-    {
-        LOG_ERROR("[Restart]: Failed to seek to %d, result: %s",
-                  data_pos_,
-                  LogFsError(res));
-    }
-    else
-    {
-        LOG("[Restart]: Seeked to %d, result: %s", data_pos_, LogFsError(res));
-    }
-
-    // playing_ = true;
-
-    requestNewSamples(FIFO_SIZE / 2);
-
-    return res;
-}
-
-FRESULT SampleReader::close()
-{
-    path_     = "";
-    data_pos_ = 0;
-    invalid_  = true;
-    return f_close(&fil_);
+    Request req;
+    req.type      = Request::Type::Seek;
+    req.requester = this;
+    req.file      = &fil_;
+    req.seek_pos  = data_pos_;
+    PushRequest(req);
 }
