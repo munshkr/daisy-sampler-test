@@ -45,7 +45,7 @@ void RequestManager::HandleRequests()
             }
 
             // Push read samples into FIFO
-            for(size_t i = 0; i < req.num_samples; i++)
+            for(size_t i = 0; i < bytes_read / sizeof(int16_t); i++)
             {
                 req.fifo->PushBack(req.temp_buffer[i]);
             }
