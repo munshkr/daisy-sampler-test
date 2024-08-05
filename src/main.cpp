@@ -38,7 +38,7 @@ void InitMemoryCard()
     SdmmcHandler::Config sd_cfg;
     sd_cfg.speed           = SdmmcHandler::Speed::FAST;
     sd_cfg.width           = SdmmcHandler::BusWidth::BITS_4;
-    sd_cfg.clock_powersave = true;
+    sd_cfg.clock_powersave = false;
     sdcard.Init(sd_cfg);
 
     // Setup our interface to the FatFS middleware
@@ -154,7 +154,7 @@ void PrepareTimer()
 
 int main()
 {
-    pod.Init();
+    pod.Init(true);
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
     pod.SetAudioBlockSize(64);
