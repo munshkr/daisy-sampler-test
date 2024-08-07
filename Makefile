@@ -27,7 +27,8 @@ endif
 USE_FATFS = 1
 
 # To change custom bootloader
-APP_TYPE = BOOT_QSPI
+APP_TYPE = BOOT_SRAM
+LDSCRIPT = alt_sram.lds
 
 # Core location, and generic makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
