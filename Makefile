@@ -2,11 +2,13 @@
 TARGET = sampler_test
 
 # Sources
+# NOTE: could use wildcard here
 CPP_SOURCES = \
 	src/main.cpp \
 	src/fatfs_utils.cpp \
 	src/request_manager.cpp \
-	src/sample_reader.cpp \
+	src/sample_reader.cpp
+
 
 # Library Locations
 LIBDAISY_DIR = ./libs/libDaisy
@@ -23,6 +25,11 @@ C_DEFS += -DLOGGER
 # Enable floating point printf
 # LDFLAGS += -u _printf_float
 endif
+
+CMSIS_DSP_SRC_DIR = $(LIBDAISY_DIR)/Drivers/CMSIS-DSP/Source
+C_SOURCES = \
+	$(CMSIS_DSP_SRC_DIR)/BasicMathFunctions/arm_scale_f32.c \
+	$(CMSIS_DSP_SRC_DIR)/SupportFunctions/arm_fill_f32.c
 
 # Includes FatFS source files within project.
 USE_FATFS = 1

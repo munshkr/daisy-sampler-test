@@ -6,8 +6,7 @@
 #include "fatfs_utils.h"
 #include "sample_reader.h"
 #include "logger.h"
-
-#define DSY_SDRAM_BSS __attribute__((section(".sdram_bss")))
+#include <arm_math.h>
 
 template <typename T>
 T clamp(T in, T low, T high)
@@ -27,7 +26,7 @@ constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
 
 constexpr size_t CALLBACK_BLOCK_SIZE = 32;
-constexpr size_t PROCESS_BLOCK_SIZE = 16;
+constexpr size_t PROCESS_BLOCK_SIZE  = 16;
 static_assert(CALLBACK_BLOCK_SIZE % PROCESS_BLOCK_SIZE == 0);
 
 static float process_buf[PROCESS_BLOCK_SIZE];
@@ -95,22 +94,20 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     loadMeter.OnBlockStart();
 #endif
 
-    std::fill(out, out + size, 0.0f);
-
     size_t offset = 0;
-    while (size > 0)
+    arm_fill_f32(0.0f, out, size);
+    while(size > 0)
     {
         for(size_t j = 0; j < NUM_SAMPLERS; j++)
         {
             auto& reader = sample_readers[j];
             reader.Process(process_buf, PROCESS_BLOCK_SIZE);
-            // TODO: Use CMSIS arm math for this
-            for (size_t i = 0; i < PROCESS_BLOCK_SIZE; i++)
+            for(size_t i = 0; i < PROCESS_BLOCK_SIZE; i++)
             {
-                out[offset + i * 2] = out[offset + i * 2 + 1] += process_buf[i] * SAMPLE_GAIN;
+                out[offset + i * 2] = out[offset + i * 2 + 1]
+                    += process_buf[i] * SAMPLE_GAIN;
             }
         }
-
         size -= 2 * PROCESS_BLOCK_SIZE;
         offset += 2 * PROCESS_BLOCK_SIZE;
     }
