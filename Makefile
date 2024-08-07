@@ -10,6 +10,7 @@ CPP_SOURCES = \
 
 # Library Locations
 LIBDAISY_DIR = ./libs/libDaisy
+DAISYSP_DIR = ./libs/DaisySP
 
 # Use C++17 standard
 CPP_STANDARD = -std=gnu++17

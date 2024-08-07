@@ -29,7 +29,6 @@ constexpr float  MIX_VOL      = 1.0f;
 RequestManager request_manager;
 SampleReader   sample_readers[NUM_SAMPLERS];
 
-
 void InitMemoryCard()
 {
     LOG("Initialize memory card");
@@ -97,7 +96,7 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
         {
             auto& reader = sample_readers[j];
             auto  samp   = reader.Process();
-            TURN_LED_ON(samp == 0);
+            // TURN_LED_ON(samp == 0);
             s += samp * SAMPLE_GAIN;
         }
         out[i] = out[i + 1] = clamp(s * MIX_VOL, -1.0f, 1.0f);
@@ -157,7 +156,7 @@ int main()
     pod.Init(true);
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(64);
+    pod.SetAudioBlockSize(16);
     pod.StartAudio(AudioCallback);
 
     START_LOG();

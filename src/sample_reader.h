@@ -43,9 +43,9 @@ class SampleReader : public Requester
     size_t underrun_total_samples = 0; // Total number of samples underrun.
 
   private:
-    static constexpr float LOAD_THRESHOLD_RATIO
-        = 0.25f; // i.e. 1/4 of buffer size
-    static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE * LOAD_THRESHOLD_RATIO;
+    // static constexpr float LOAD_THRESHOLD_RATIO
+    //     = 0.5f; // i.e. 1/4 of buffer size
+    static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE / 2; //* LOAD_THRESHOLD_RATIO;
 
     FRESULT close();
     void    requestNewSamples(size_t num_samples);

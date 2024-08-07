@@ -98,7 +98,7 @@ float SampleReader::Process()
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
     {
-        const size_t num_samples_to_request = FIFO_SIZE - num_samples_left;
+        const size_t num_samples_to_request = FIFO_SIZE / 2;// FIFO_SIZE - num_samples_left;
         // LOG("[Process] Requesting %d new samples (only %d left)",
         //     num_samples_to_request,
         //     num_samples_left);
