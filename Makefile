@@ -21,7 +21,7 @@ $(info ** Logger enabled **)
 # Enable logger
 C_DEFS += -DLOGGER
 # Enable floating point printf
-LDFLAGS += -u _printf_float
+# LDFLAGS += -u _printf_float
 endif
 
 # Includes FatFS source files within project.
@@ -34,6 +34,8 @@ LDSCRIPT = alt_sram.lds
 # Core location, and generic makefile.
 SYSTEM_FILES_DIR = $(LIBDAISY_DIR)/core
 include $(SYSTEM_FILES_DIR)/Makefile
+
+CFLAGS += -funroll-loops
 
 .PHONY: monitor
 

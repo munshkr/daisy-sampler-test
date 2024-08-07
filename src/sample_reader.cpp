@@ -108,6 +108,51 @@ float SampleReader::Process()
     return s162f(samp);
 }
 
+void SampleReader::Process(float *out, size_t size)
+{
+    if(!playing_)
+    {
+        std::fill(out, out + size, 0.0f);
+        return;
+    }
+
+    for (size_t i = 0; i < size; i++)
+    {
+        if(fifo_.IsEmpty())
+        {
+            underrun_samples_++;
+            underrun_total_samples++;
+            out[i] = 0.0f;
+            continue;
+        }
+
+        out[i] = s162f(fifo_.PopFront());
+    }
+
+    // Load new samples if we're running low...
+    // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
+    // voices if possible).
+
+    const size_t num_samples_left = fifo_.GetNumElements();
+    // LOG("[Process] %d samples left", num_samples_left);
+    if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
+    && f_eof(&fil_) == 0)
+    {
+        const size_t num_samples_to_request = FIFO_SIZE / 2;// FIFO_SIZE - num_samples_left;
+        // LOG("[Process] Requesting %d new samples (only %d left)",
+        //     num_samples_to_request,
+        //     num_samples_left);
+        requestNewSamples(num_samples_to_request);
+    }
+
+    if(underrun_samples_ > 0)
+    {
+        underruns++;
+        underrun_samples_ = 0;
+    }
+}
+
+
 void SampleReader::Restart()
 {
     requestRestart();

@@ -47,7 +47,7 @@ class RequestManager
 {
   public:
     void PushRequest(const Request &req);
-    bool HandleRequest();
+    bool HandleRequests();
 
   private:
     FIFO<Request, 32> request_queue_;

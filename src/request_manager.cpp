@@ -18,7 +18,7 @@ void RequestManager::PushRequest(const Request& req)
     }
 }
 
-bool RequestManager::HandleRequest()
+bool RequestManager::HandleRequests()
 {
     if(request_queue_.IsEmpty())
         return false;

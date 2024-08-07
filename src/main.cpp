@@ -22,9 +22,15 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t NUM_SAMPLERS = 8; // Sample polyphony
+constexpr size_t NUM_SAMPLERS = 12; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
+
+constexpr size_t CALLBACK_BLOCK_SIZE = 64;
+constexpr size_t PROCESS_BLOCK_SIZE = 16;
+static_assert(CALLBACK_BLOCK_SIZE % PROCESS_BLOCK_SIZE == 0);
+
+static float process_buf[PROCESS_BLOCK_SIZE];
 
 RequestManager request_manager;
 SampleReader   sample_readers[NUM_SAMPLERS];
@@ -88,19 +94,39 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
     loadMeter.OnBlockStart();
 #endif
 
-    for(size_t i = 0; i < size; i += 2)
+    std::fill(out, out + size, 0.0f);
+
+    size_t offset = 0;
+    while (size > 0)
     {
-        // Mix all samplers output together
-        float s = 0.0f;
         for(size_t j = 0; j < NUM_SAMPLERS; j++)
         {
             auto& reader = sample_readers[j];
-            auto  samp   = reader.Process();
-            // TURN_LED_ON(samp == 0);
-            s += samp * SAMPLE_GAIN;
+            reader.Process(process_buf, PROCESS_BLOCK_SIZE);
+            // TODO: Use CMSIS arm math for this
+            for (size_t i = 0; i < PROCESS_BLOCK_SIZE; i++)
+            {
+                out[offset + i * 2] = out[offset + i * 2 + 1] += process_buf[i] * SAMPLE_GAIN;
+            }
         }
-        out[i] = out[i + 1] = clamp(s * MIX_VOL, -1.0f, 1.0f);
+
+        size -= 2 * PROCESS_BLOCK_SIZE;
+        offset += 2 * PROCESS_BLOCK_SIZE;
     }
+
+    // for(size_t i = 0; i < size; i += 2)
+    // {
+    //     // Mix all samplers output together
+    //     float s = 0.0f;
+    //     for(size_t j = 0; j < NUM_SAMPLERS; j++)
+    //     {
+    //         auto& reader = sample_readers[j];
+    //         auto  samp   = reader.Process();
+    //         // TURN_LED_ON(samp == 0);
+    //         s += samp * SAMPLE_GAIN;
+    //     }
+    //     out[i] = out[i + 1] = clamp(s * MIX_VOL, -1.0f, 1.0f);
+    // }
 
 #ifdef MEASURE_LOAD
     loadMeter.OnBlockEnd();
@@ -156,8 +182,7 @@ int main()
     pod.Init(true);
 
     pod.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-    pod.SetAudioBlockSize(16);
-    pod.StartAudio(AudioCallback);
+    pod.SetAudioBlockSize(CALLBACK_BLOCK_SIZE);
 
     START_LOG();
 
@@ -166,6 +191,9 @@ int main()
     PrepareTimer();
 
     OpenAllSampleFiles();
+    request_manager.HandleRequests();
+
+    pod.StartAudio(AudioCallback);
 
 #ifdef MEASURE_LOAD
     loadMeter.Init(pod.AudioSampleRate(), pod.AudioBlockSize());
@@ -185,6 +213,6 @@ int main()
             OpenAllSampleFiles();
         }
 
-        request_manager.HandleRequest();
+        request_manager.HandleRequests();
     }
 }
