@@ -26,7 +26,7 @@ constexpr size_t NUM_SAMPLERS = 12; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
 
-constexpr size_t CALLBACK_BLOCK_SIZE = 64;
+constexpr size_t CALLBACK_BLOCK_SIZE = 32;
 constexpr size_t PROCESS_BLOCK_SIZE = 16;
 static_assert(CALLBACK_BLOCK_SIZE % PROCESS_BLOCK_SIZE == 0);
 
@@ -61,6 +61,7 @@ void InitSampleReaders()
 
     for(size_t i = 0; i < NUM_SAMPLERS; i++)
     {
+        sample_readers[i].Init();
         sample_readers[i].SetRequestManager(&request_manager);
     }
 }

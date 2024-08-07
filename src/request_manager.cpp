@@ -47,10 +47,11 @@ bool RequestManager::HandleRequests()
 
                 // Push read samples into FIFO
                 size_t samples_read = bytes_read / sizeof(int16_t);
-                for(size_t i = 0; i < samples_read; i++)
-                {
-                    req.fifo->PushBack(req.temp_buffer[i]);
-                }
+                req.fifo->Overwrite(req.temp_buffer, samples_read);
+                // for(size_t i = 0; i < samples_read; i++)
+                // {
+                //     req.fifo->Write(req.temp_buffer[i]);
+                // }
 
                 break;
             }

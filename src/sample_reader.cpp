@@ -7,6 +7,11 @@
 
 using namespace daisy;
 
+void SampleReader::Init()
+{
+    fifo_.Init();
+}
+
 FRESULT SampleReader::Open(std::string path)
 {
     // NOTE: This is an optimization ot avoid re-opening the same file, but it
@@ -74,7 +79,7 @@ float SampleReader::Process()
         return 0.0;
     }
 
-    if(fifo_.IsEmpty())
+    if(fifo_.isEmpty())
     {
         underrun_samples_++;
         underrun_total_samples++;
@@ -87,13 +92,13 @@ float SampleReader::Process()
         underrun_samples_ = 0;
     }
 
-    int16_t samp = fifo_.PopFront();
+    int16_t samp = fifo_.readable() > 0 ? fifo_.ImmediateRead() : 0;
 
     // Load new samples if we're running low...
     // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
     // voices if possible).
 
-    const size_t num_samples_left = fifo_.GetNumElements();
+    const size_t num_samples_left = fifo_.readable();
     // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
@@ -118,7 +123,7 @@ void SampleReader::Process(float *out, size_t size)
 
     for (size_t i = 0; i < size; i++)
     {
-        if(fifo_.IsEmpty())
+        if(fifo_.readable() == 0)
         {
             underrun_samples_++;
             underrun_total_samples++;
@@ -126,14 +131,14 @@ void SampleReader::Process(float *out, size_t size)
             continue;
         }
 
-        out[i] = s162f(fifo_.PopFront());
+        out[i] = s162f(fifo_.ImmediateRead());
     }
 
     // Load new samples if we're running low...
     // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
     // voices if possible).
 
-    const size_t num_samples_left = fifo_.GetNumElements();
+    const size_t num_samples_left = fifo_.readable();
     // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
     && f_eof(&fil_) == 0)
@@ -156,7 +161,7 @@ void SampleReader::Process(float *out, size_t size)
 void SampleReader::Restart()
 {
     requestRestart();
-    requestNewSamples(FIFO_SIZE / 2);
+    // requestNewSamples(FIFO_SIZE / 2);
 }
 
 FRESULT SampleReader::close()

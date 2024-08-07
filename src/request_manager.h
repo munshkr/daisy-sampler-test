@@ -4,7 +4,7 @@
 
 using namespace daisy;
 
-constexpr size_t FIFO_SIZE = 4096;
+constexpr size_t FIFO_SIZE = 2048;
 
 class RequestManager;
 struct Request;
@@ -36,7 +36,8 @@ struct Request
 
     // Read
     size_t                    num_samples;
-    FIFO<int16_t, FIFO_SIZE> *fifo;
+    RingBuffer<int16_t, FIFO_SIZE> *fifo;
+    // FIFO<int16_t, FIFO_SIZE> *fifo;
     int16_t                  *temp_buffer;
 
     // Seek

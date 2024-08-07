@@ -20,6 +20,9 @@ reading it with double-buffering. */
 class SampleReader : public Requester
 {
   public:
+
+    void Init();
+
     /** Opens the file for reading.
     \param path File to open
      */
@@ -60,7 +63,8 @@ class SampleReader : public Requester
     size_t      data_pos_ = 0;
     FIL         fil_;
 
-    FIFO<int16_t, FIFO_SIZE> fifo_;
+    // FIFO<int16_t, FIFO_SIZE> fifo_;
+    RingBuffer<int16_t, FIFO_SIZE> fifo_;
     int16_t temp_buff_[FIFO_SIZE]; // temp buffer to store data from f_read
 
     size_t underrun_samples_ = 0; // Number of samples we've underrun so far.
