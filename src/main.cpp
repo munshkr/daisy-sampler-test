@@ -22,7 +22,7 @@ SdmmcHandler   sdcard;
 FatFSInterface fsi;
 CpuLoadMeter   loadMeter;
 
-constexpr size_t NUM_SAMPLERS = 12; // Sample polyphony
+constexpr size_t NUM_SAMPLERS = 16; // Sample polyphony
 constexpr float  SAMPLE_GAIN  = 1.0f / float(NUM_SAMPLERS);
 constexpr float  MIX_VOL      = 1.0f;
 

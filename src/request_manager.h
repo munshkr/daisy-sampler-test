@@ -35,10 +35,8 @@ struct Request
     FIL       *file;
 
     // Read
-    size_t                    num_samples;
+    size_t                          num_samples;
     RingBuffer<int16_t, FIFO_SIZE> *fifo;
-    // FIFO<int16_t, FIFO_SIZE> *fifo;
-    int16_t                  *temp_buffer;
 
     // Seek
     size_t seek_pos;
@@ -52,4 +50,5 @@ class RequestManager
 
   private:
     FIFO<Request, 32> request_queue_;
+    int16_t           temp_buffer_[FIFO_SIZE];
 };

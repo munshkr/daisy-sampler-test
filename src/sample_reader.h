@@ -20,7 +20,6 @@ reading it with double-buffering. */
 class SampleReader : public Requester
 {
   public:
-
     void Init();
 
     /** Opens the file for reading.
@@ -48,16 +47,15 @@ class SampleReader : public Requester
     size_t underrun_total_samples = 0; // Total number of samples underrun.
 
   private:
-    static constexpr float LOAD_THRESHOLD_RATIO
-        = 0.5f; // i.e. 1/4 of buffer size
-    static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE / 2; //* LOAD_THRESHOLD_RATIO;
+    static constexpr size_t LOAD_THRESHOLD = FIFO_SIZE / 2;
 
     FRESULT close();
     void    requestNewSamples(size_t num_samples);
     void    requestRestart();
 
-    bool playing_ = false;
-    bool invalid_ = false;
+    bool playing_        = false;
+    bool invalid_        = false;
+    bool awaiting_start_ = false;
 
     std::string path_;
     size_t      data_pos_ = 0;
@@ -65,7 +63,6 @@ class SampleReader : public Requester
 
     // FIFO<int16_t, FIFO_SIZE> fifo_;
     RingBuffer<int16_t, FIFO_SIZE> fifo_;
-    int16_t temp_buff_[FIFO_SIZE]; // temp buffer to store data from f_read
 
     size_t underrun_samples_ = 0; // Number of samples we've underrun so far.
 };

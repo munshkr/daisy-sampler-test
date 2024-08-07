@@ -103,7 +103,8 @@ float SampleReader::Process()
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
     {
-        const size_t num_samples_to_request = FIFO_SIZE / 2;// FIFO_SIZE - num_samples_left;
+        const size_t num_samples_to_request
+            = FIFO_SIZE / 2; // FIFO_SIZE - num_samples_left;
         // LOG("[Process] Requesting %d new samples (only %d left)",
         //     num_samples_to_request,
         //     num_samples_left);
@@ -121,16 +122,21 @@ void SampleReader::Process(float *out, size_t size)
         return;
     }
 
-    for (size_t i = 0; i < size; i++)
+    for(size_t i = 0; i < size; i++)
     {
         if(fifo_.readable() == 0)
         {
-            underrun_samples_++;
-            underrun_total_samples++;
+            if(!awaiting_start_)
+            {
+                underrun_samples_++;
+                underrun_total_samples++;
+            }
             out[i] = 0.0f;
             continue;
         }
 
+        if(awaiting_start_)
+            awaiting_start_ = false;
         out[i] = s162f(fifo_.ImmediateRead());
     }
 
@@ -141,9 +147,10 @@ void SampleReader::Process(float *out, size_t size)
     const size_t num_samples_left = fifo_.readable();
     // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
-    && f_eof(&fil_) == 0)
+       && f_eof(&fil_) == 0)
     {
-        const size_t num_samples_to_request = FIFO_SIZE / 2;// FIFO_SIZE - num_samples_left;
+        const size_t num_samples_to_request
+            = FIFO_SIZE / 2; // FIFO_SIZE - num_samples_left;
         // LOG("[Process] Requesting %d new samples (only %d left)",
         //     num_samples_to_request,
         //     num_samples_left);
@@ -161,7 +168,10 @@ void SampleReader::Process(float *out, size_t size)
 void SampleReader::Restart()
 {
     requestRestart();
-    // requestNewSamples(FIFO_SIZE / 2);
+    requestNewSamples(FIFO_SIZE / 2);
+    // TODO: should handle immediate re-seek better than this
+    fifo_.Flush();
+    awaiting_start_ = true;
 }
 
 FRESULT SampleReader::close()
@@ -186,7 +196,6 @@ void SampleReader::requestNewSamples(const size_t num_samples)
     req.file        = &fil_;
     req.num_samples = num_samples;
     req.fifo        = &fifo_;
-    req.temp_buffer = temp_buff_;
     PushRequest(req);
 }
 
