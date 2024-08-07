@@ -167,9 +167,10 @@ void SampleReader::Process(float *out, size_t size)
 
 void SampleReader::Restart()
 {
+    InvalidatePendingRequests();
     requestRestart();
     requestNewSamples(FIFO_SIZE / 2);
-    // TODO: should handle immediate re-seek better than this
+    // TODO: should handle immediate re-seek better than this - fade out, etc
     fifo_.Flush();
     awaiting_start_ = true;
 }

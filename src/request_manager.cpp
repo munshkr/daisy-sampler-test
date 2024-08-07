@@ -10,6 +10,11 @@ void Requester::PushRequest(const Request& req)
     cnt_read_req_++;
 }
 
+void Requester::InvalidatePendingRequests()
+{
+    cnt_read_req_ -= manager_->InvalidatePendingRequests(this);
+}
+
 void RequestManager::PushRequest(const Request& req)
 {
     if(!request_queue_.PushBack(req))
@@ -26,6 +31,8 @@ bool RequestManager::HandleRequests()
     while(!request_queue_.IsEmpty())
     {
         auto req = request_queue_.PopFront();
+        if(!req.valid)
+            continue;
         switch(req.type)
         {
             case Request::Type::Read:
@@ -82,4 +89,20 @@ bool RequestManager::HandleRequests()
         req.requester->AckRequest();
     }
     return true;
+}
+
+size_t RequestManager::InvalidatePendingRequests(Requester* requester)
+{
+    // prevent any new requests from ISR while we're doing this
+    ScopedIrqBlocker block;
+    size_t           count = 0;
+    for(size_t i = 0; i < request_queue_.GetNumElements(); i++)
+    {
+        if(request_queue_[i].requester == requester)
+        {
+            request_queue_[i].valid = false;
+            count++;
+        }
+    }
+    return count;
 }

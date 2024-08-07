@@ -16,6 +16,7 @@ class Requester
     void AckRequest() { cnt_read_req_--; }
     bool HasPendingRequests() const { return cnt_read_req_ > 0; }
     void PushRequest(const Request &req);
+    void InvalidatePendingRequests();
 
   private:
     RequestManager *manager_      = nullptr;
@@ -33,6 +34,7 @@ struct Request
     Type       type;
     Requester *requester;
     FIL       *file;
+    bool       valid = true;
 
     // Read
     size_t                          num_samples;
@@ -45,8 +47,9 @@ struct Request
 class RequestManager
 {
   public:
-    void PushRequest(const Request &req);
-    bool HandleRequests();
+    void   PushRequest(const Request &req);
+    bool   HandleRequests();
+    size_t InvalidatePendingRequests(Requester *requester);
 
   private:
     FIFO<Request, 32> request_queue_;
