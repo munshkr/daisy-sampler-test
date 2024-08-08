@@ -38,7 +38,7 @@ struct Request
 
     // Read
     size_t                          num_samples;
-    RingBuffer<int16_t, FIFO_SIZE> *fifo;
+    RingBuffer<int16_t, FIFO_SIZE> *ringbuf;
 
     // Seek
     size_t seek_pos;

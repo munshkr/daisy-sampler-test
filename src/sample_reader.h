@@ -62,7 +62,7 @@ class SampleReader : public Requester
     FIL         fil_;
 
     // FIFO<int16_t, FIFO_SIZE> fifo_;
-    RingBuffer<int16_t, FIFO_SIZE> fifo_;
+    RingBuffer<int16_t, FIFO_SIZE> ringbuf_;
 
     size_t underrun_samples_ = 0; // Number of samples we've underrun so far.
 };

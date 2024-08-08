@@ -9,7 +9,7 @@ using namespace daisy;
 
 void SampleReader::Init()
 {
-    fifo_.Init();
+    ringbuf_.Init();
 }
 
 FRESULT SampleReader::Open(std::string path)
@@ -63,7 +63,7 @@ FRESULT SampleReader::Open(std::string path)
 
     requestNewSamples(FIFO_SIZE / 2);
     awaiting_start_ = true;
-    fifo_.Flush();
+    ringbuf_.Flush();
 
     return res;
 }
@@ -81,7 +81,7 @@ float SampleReader::Process()
         return 0.0;
     }
 
-    if(fifo_.isEmpty())
+    if(ringbuf_.isEmpty())
     {
         if(!awaiting_start_)
         {
@@ -99,13 +99,13 @@ float SampleReader::Process()
         underrun_samples_ = 0;
     }
 
-    int16_t samp = fifo_.ImmediateRead();
+    int16_t samp = ringbuf_.ImmediateRead();
 
     // Load new samples if we're running low...
     // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
     // voices if possible).
 
-    const size_t num_samples_left = fifo_.readable();
+    const size_t num_samples_left = ringbuf_.readable();
     // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
@@ -131,7 +131,7 @@ void SampleReader::Process(float *out, size_t size)
 
     for(size_t i = 0; i < size; i++)
     {
-        if(fifo_.isEmpty())
+        if(ringbuf_.isEmpty())
         {
             if(!awaiting_start_)
             {
@@ -143,14 +143,14 @@ void SampleReader::Process(float *out, size_t size)
         }
 
         awaiting_start_ = false;
-        out[i] = s162f(fifo_.ImmediateRead());
+        out[i] = s162f(ringbuf_.ImmediateRead());
     }
 
     // Load new samples if we're running low...
     // Threshold can be 1/8, 1/4, etc. (plan for worst case fill-time of all
     // voices if possible).
 
-    const size_t num_samples_left = fifo_.readable();
+    const size_t num_samples_left = ringbuf_.readable();
     // LOG("[Process] %d samples left", num_samples_left);
     if(num_samples_left < LOAD_THRESHOLD && !HasPendingRequests()
        && f_eof(&fil_) == 0)
@@ -177,7 +177,7 @@ void SampleReader::Restart()
     requestRestart();
     requestNewSamples(FIFO_SIZE / 2);
     // TODO: should handle immediate re-seek better than this - fade out, etc
-    fifo_.Flush();
+    ringbuf_.Flush();
     awaiting_start_ = true;
 }
 
@@ -202,7 +202,7 @@ void SampleReader::requestNewSamples(const size_t num_samples)
     req.requester   = this;
     req.file        = &fil_;
     req.num_samples = num_samples;
-    req.fifo        = &fifo_;
+    req.ringbuf        = &ringbuf_;
     PushRequest(req);
 }
 

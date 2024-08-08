@@ -54,7 +54,7 @@ bool RequestManager::HandleRequests()
 
                 // Push read samples into FIFO
                 size_t samples_read = bytes_read / sizeof(int16_t);
-                req.fifo->Overwrite(temp_buffer_, samples_read);
+                req.ringbuf->Overwrite(temp_buffer_, samples_read);
                 // for(size_t i = 0; i < samples_read; i++)
                 // {
                 //     req.fifo->Write(req.temp_buffer[i]);
@@ -93,7 +93,7 @@ bool RequestManager::HandleRequests()
 
 size_t RequestManager::InvalidatePendingRequests(Requester* requester)
 {
-    // prevent any new requests from ISR while we're doing this
+    // prevent any new requests being added from ISR while we're doing this
     ScopedIrqBlocker block;
     size_t           count = 0;
     for(size_t i = 0; i < request_queue_.GetNumElements(); i++)
