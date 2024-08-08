@@ -96,7 +96,7 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
 
     size_t offset = 0;
     arm_fill_f32(0.0f, out, size);
-    while(size > 0)
+    while(offset < size)
     {
         for(size_t j = 0; j < NUM_SAMPLERS; j++)
         {
@@ -108,7 +108,6 @@ void AudioCallback(AudioHandle::InterleavingInputBuffer  in,
                     += process_buf[i] * SAMPLE_GAIN;
             }
         }
-        size -= 2 * PROCESS_BLOCK_SIZE;
         offset += 2 * PROCESS_BLOCK_SIZE;
     }
 
